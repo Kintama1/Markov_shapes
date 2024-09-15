@@ -12,10 +12,19 @@ SHAPE_HEIGHT = 60
 SHAPE_VELOCITY = 5
 ROTATION_ANGLE = 0
 FPS = 60
-def draw(shape):
+SPAWN_DELAY= 5
+
+def draw(shape,shapes_list):
     WIN.fill((255,255,255))
+    for position, angle in shapes_list:
+        old_shape_surface = pygame.Surface((SHAPE_WIDTH,SHAPE_HEIGHT), pygame.SRCALPHA)
+        pygame.draw.rect(old_shape_surface,(141,171,206),(0,0,SHAPE_WIDTH,SHAPE_HEIGHT) )
+        old_rotated_surface = pygame.transform.rotate(old_shape_surface, angle)
+        old_rotated_rect = old_rotated_surface.get_rect(center = position.center)
+        WIN.blit(old_rotated_surface,old_rotated_rect.topleft)
+    #Manipulating current shape
     #Creating a surface for the shape
-    shape_surface = pygame.Surface((SHAPE_WIDTH,SHAPE_HEIGHT), pygame.SRCALPHA)
+    shape_surface = pygame.Surface((SHAPE_WIDTH,SHAPE_HEIGHT), pygame.SRCALPHA) #WILL HAVE TO MODULARIZE THIS
     pygame.draw.rect(shape_surface,(141,171,206),(0,0,SHAPE_WIDTH,SHAPE_HEIGHT) )
     #rotating the shape surface
     rotated_surface = pygame.transform.rotate(shape_surface, ROTATION_ANGLE)
@@ -32,9 +41,12 @@ def main():
     clock = pygame.time.Clock()
     running = True
     shape = pygame.Rect(500, HEIGHT-SHAPE_HEIGHT, SHAPE_WIDTH, SHAPE_HEIGHT)
+    #Will store a list of all the shapes after the 
+    shapes_list = []
+    last_spawn_time = time.time()
     #a while loop that updates each frame of the game
     while running:
-
+        current_time = time.time()
         for event in pygame.event.get():
             if event.type == pygame.QUIT: #if the close button is clicked, close the game
                 running = False
@@ -53,7 +65,12 @@ def main():
         if keys[pygame.K_d]:
             
             ROTATION_ANGLE -= SHAPE_VELOCITY 
-        draw(shape)
+        if current_time - last_spawn_time > SPAWN_DELAY:
+            shapes_list.append((shape, ROTATION_ANGLE))
+            shape = pygame.Rect(500, HEIGHT-SHAPE_HEIGHT, SHAPE_WIDTH, SHAPE_HEIGHT)
+            ROTATION_ANGLE = 0
+            last_spawn_time = current_time
+        draw(shape, shapes_list)
         
         clock.tick(FPS)
 
