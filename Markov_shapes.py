@@ -103,8 +103,7 @@ class MarkovShape:
             "triangle": self.draw_triangle,
             "arc": self.draw_arc
         }
-        print(switch_dict[shape])
-        switch_dict[shape](surface,rect)
+        return switch_dict[shape](surface,rect)
 
 
 

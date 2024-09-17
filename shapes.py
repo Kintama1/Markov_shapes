@@ -15,34 +15,27 @@ ROTATION_ANGLE = 0
 FPS = 60
 SPAWN_DELAY= 5
 
-shapes_matrix = {
-        "rect" :{"rect": 0.25,"circle":0.25, "triangle": 0.25, "arc": 0.25},
-        "circle" :{"rect":0.25, "triangle": 0.25, "arc": 0.25,"circle":0.25,},
-        "triangle" :{"rect":0.25, "circle": 0.25, "arc": 0.25,"triangle": 0.25},
-        "arc" :{"rect":0.25, "circle": 0.25, "triangle": 0.25,"arc": 0.25}
-    }
-shapes = MarkovShape(shapes_matrix)
-shapes_list = shapes.shape_sequence(length= 20)
-
-def draw(current_shape,shape_rect,old_shapes_list,shapes):
+def draw(current_shape, shape_rect, old_shapes_list, shapes):
     WIN.fill((255,255,255))
-    #drawing all the old shapes
+    
+    # Drawing all the old shapes
     for shape, position, angle in old_shapes_list:
-        old_shape_surface = pygame.Surface((SHAPE_WIDTH,SHAPE_HEIGHT), pygame.SRCALPHA)
-        shapes.shape_switchboard(shape,old_shape_surface,position) #this will be the switchboard drawer
-        old_rotated_surface = pygame.transform.rotate(old_shape_surface, angle)
-        old_rotated_rect = old_rotated_surface.get_rect(center = position.center)
-        WIN.blit(old_rotated_surface,old_rotated_rect.topleft)
-    #Manipulating current shape
-    #Creating a surface for the shape
-    shape_surface = pygame.Surface((SHAPE_WIDTH,SHAPE_HEIGHT), pygame.SRCALPHA) #WILL HAVE TO MODULARIZE THIS
-    shapes.shape_switchboard(current_shape,shape_surface,shape_rect)
-    #rotating the shape surface
-    rotated_surface = pygame.transform.rotate(shape_surface, ROTATION_ANGLE)
-    rotated_rect = rotated_surface.get_rect(center= shape_rect.center)
-
-    #drawing of a rectangle
+        # Create a temporary surface for rotation
+        temp_surface = pygame.Surface((SHAPE_WIDTH, SHAPE_HEIGHT), pygame.SRCALPHA)
+        temp_rect = pygame.Rect(0, 0, SHAPE_WIDTH, SHAPE_HEIGHT)
+        shapes.shape_switchboard(shape, temp_surface, temp_rect)
+        rotated_surface = pygame.transform.rotate(temp_surface, angle)
+        rotated_rect = rotated_surface.get_rect(center=position.center)
+        WIN.blit(rotated_surface, rotated_rect.topleft)
+    
+    # Drawing the current shape
+    temp_surface = pygame.Surface((SHAPE_WIDTH, SHAPE_HEIGHT), pygame.SRCALPHA)
+    temp_rect = pygame.Rect(0, 0, SHAPE_WIDTH, SHAPE_HEIGHT)
+    shapes.shape_switchboard(current_shape, temp_surface, temp_rect)
+    rotated_surface = pygame.transform.rotate(temp_surface, ROTATION_ANGLE)
+    rotated_rect = rotated_surface.get_rect(center=shape_rect.center)
     WIN.blit(rotated_surface, rotated_rect.topleft)
+    
     pygame.display.update()
     
 def key_moves(shape_rect):
