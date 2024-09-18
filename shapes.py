@@ -140,7 +140,6 @@ def main():
         #boolean to end the timer for current shape 
         skip_current,space_pressed = skip_shape(skip_current,space_pressed)
         shape_rect = key_moves(shape_rect)
-        print(skip_current)
         time_left = int(SPAWN_DELAY - (current_time-last_spawn_time) + 1)
         if current_time - last_spawn_time > SPAWN_DELAY or skip_current:
             old_shapes_list.append((current_shape,shape_rect, ROTATION_ANGLE))
