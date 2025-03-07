@@ -7,7 +7,6 @@ import platform
 def check_environment():
     """
     Verifies the Python environment and required packages are properly set up.
-    This helps ensure we have the correct versions before starting deployment.
     """
     print("Checking environment...")
     
@@ -25,84 +24,143 @@ def check_environment():
         import pygbag
         print(f"Installed Pygbag version: {pygbag.__version__}")
 
-def create_web_directory():
+def rename_config_file():
     """
-    Creates and prepares the web directory structure with all necessary files.
-    This ensures all required files are in place before running Pygbag.
+    Ensure the pygbag config file has the correct name.
     """
-    print("Setting up web directory...")
+    if os.path.exists('pybag.config.json') and not os.path.exists('pygbag.config.json'):
+        print("Renaming pybag.config.json to pygbag.config.json")
+        shutil.copy2('pybag.config.json', 'pygbag.config.json')
+
+def prepare_build_directory():
+    """
+    Creates a clean build directory with all necessary files.
+    """
+    print("Setting up build directory...")
     
-    # Clean up existing directories
-    for dir_name in ['web', 'build']:
-        if os.path.exists(dir_name):
-            print(f"Removing existing {dir_name} directory")
-            shutil.rmtree(dir_name)
+    # Define the build directory path
+    build_dir = 'clean_build'
     
-    # Create new directories
-    os.makedirs('web')
-    print("Created new web directory")
+    # Clean up existing build directory if it exists
+    if os.path.exists(build_dir):
+        print(f"Removing existing {build_dir} directory")
+        shutil.rmtree(build_dir)
     
-    # Create __init__.py files
-    for path in ['web', 'web/utils']:
-        os.makedirs(path, exist_ok=True)
-        init_file = os.path.join(path, '__init__.py')
-        with open(init_file, 'w') as f:
-            pass
-        print(f"Created {init_file}")
+    # Create new build directory
+    os.makedirs(build_dir)
+    print(f"Created new {build_dir} directory")
     
-    # Copy required files
-    files_to_copy = [
-        'main.py',
-        'markov.py',
-        'game.py',          
-        'menu_system.py',   
-        'utils/settings.py',
-        'utils/button.py',  
+    # Copy all Python files
+    python_files = [
+        'main.py', 
+        'markov.py', 
+        'game.py', 
+        'menu_system.py', 
+        '__init__.py'
     ]
     
-    for file_path in files_to_copy:
-        dest_path = os.path.join('web', file_path)
-        os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+    for file_path in python_files:
         if os.path.exists(file_path):
-            shutil.copy2(file_path, dest_path)
-            print(f"Copied {file_path} to {dest_path}")
+            shutil.copy2(file_path, os.path.join(build_dir, file_path))
+            print(f"Copied {file_path} to {build_dir}")
         else:
             print(f"Warning: {file_path} not found")
+    
+    # Copy pygbag.config.json
+    if os.path.exists('pygbag.config.json'):
+        shutil.copy2('pygbag.config.json', os.path.join(build_dir, 'pygbag.config.json'))
+        print(f"Copied pygbag.config.json to {build_dir}")
+    
+    # Copy directories
+    directories = ['assets', 'utils', 'examples']
+    
+    for directory in directories:
+        if os.path.exists(directory):
+            dest_dir = os.path.join(build_dir, directory)
+            shutil.copytree(directory, dest_dir)
+            print(f"Copied {directory} directory to {build_dir}")
+        else:
+            print(f"Warning: {directory} directory not found")
+            # Create empty directories that might be needed
+            if directory in ['utils']:
+                os.makedirs(os.path.join(build_dir, directory), exist_ok=True)
+                with open(os.path.join(build_dir, directory, '__init__.py'), 'w') as f:
+                    pass
+                print(f"Created empty {directory} directory with __init__.py")
+    
+    return build_dir
 
-def run_pygbag():
+def run_pygbag_build(build_dir):
     """
-    Runs Pygbag with the correct arguments for version 0.8.3.
-    Uses simplified argument syntax to avoid compatibility issues.
+    Runs Pygbag build command on the prepared directory.
     """
-    print("\nStarting Pygbag...")
+    print("\nRunning Pygbag build...")
+    
     try:
-        # Using simplified arguments that are known to work with 0.8.3
+        # Change to the build directory
+        original_dir = os.getcwd()
+        os.chdir(build_dir)
+        
+        # Run pygbag build command
         subprocess.run([
             sys.executable,
             "-m",
             "pygbag",
-            "--port", "8000",
-            "--bind", "0.0.0.0",
-            "--cache", "no",
-            "web"
+            "--build",
+            "--ume_block", "0",
+            "--app_name", "Markov Shapes",
+            "--title", "Markov Shapes",
+            "."  # Build from current directory
         ], check=True)
+        
+        # Move back to original directory
+        os.chdir(original_dir)
+        
+        # Check if build was successful
+        if os.path.exists(os.path.join(build_dir, 'build', 'web')):
+            print("\nBuild completed successfully!")
+            
+            # Copy the build artifacts to a more accessible location
+            if os.path.exists('web_build'):
+                shutil.rmtree('web_build')
+            
+            shutil.copytree(
+                os.path.join(build_dir, 'build', 'web'), 
+                'web_build'
+            )
+            
+            print("\nDeployable files are available in the 'web_build' directory.")
+            print("To deploy to itch.io:")
+            print("1. Go to your project page on itch.io")
+            print("2. Click 'Upload files' or 'Edit game'")
+            print("3. Choose 'HTML' as the project type")
+            print("4. Upload all files from the 'web_build' directory")
+            print("5. Check 'This file will be played in the browser'")
+        else:
+            print("\nBuild process completed but build directory not found.")
+            print("Check for errors in the build process.")
+    
     except subprocess.CalledProcessError as e:
         print(f"Error running Pygbag: {e}")
-        sys.exit(1)
-    except KeyboardInterrupt:
-        print("\nStopping server...")
-        sys.exit(0)
+        return False
+    
+    return True
 
 def main():
     """
-    Main deployment process that coordinates all steps of the deployment.
-    Provides clear feedback at each stage of the process.
+    Main deployment function.
     """
-    print("Starting deployment process...")
+    print("=== Markov Shapes Deployment Process ===")
     
     check_environment()
-    create_web_directory()
-    run_pygbag()
+    rename_config_file()
+    build_dir = prepare_build_directory()
+    success = run_pygbag_build(build_dir)
+    
+    if success:
+        print("\nDeployment process completed successfully.")
+    else:
+        print("\nDeployment process encountered errors.")
 
 if __name__ == "__main__":
     main()
